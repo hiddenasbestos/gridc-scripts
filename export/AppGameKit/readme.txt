@@ -18,8 +18,7 @@ How to Install Script
 3. Choose the "Scripts" page
 4. Click the "USER SCRIPTS FOLDER ..." button and a file explorer
 	or Finder window will appear.
-5. Copy the two files "export_AppGameKit.nut" and "export_AppGameKit.xml" from
-	the 'Script' folder into the user scripts folder that opened.
+5. Copy the folder "export_AppGameKit" into the user scripts folder that opened.
 6. Exit and restart Grid Cartographer.
 7. Verify the script is installed by clicking the "File" menu > "Export" sub-menu.
 8. A new option "AppGameKit Map" should be visible.
