@@ -10,17 +10,16 @@ Installation:
 1. Load Grid Cartographer.
 2. Click the "G" tab at the top-left of the interface.
 3. Choose the "Scripts" page
-4. Click the "USER SCRIPTS FOLDER ..." button and a file explorer
-	or Finder window will appear.
+4. Click the "USER SCRIPTS FOLDER ..." button and a file explorer will open.
 5. Copy the folder "cmd_Roll" into the user scripts folder that opened.
 6. Exit and restart Grid Cartographer.
-7. Run the command from the console window by typing roll at the prompt.
+7. Run the command from the console window by typing 'roll' at the prompt.
 
 ----
 
 usage: roll [dice ...]
 
- dice    A list of either 2d6 format or just the number of sides.
+ dice    A list of either nDm format or just the number of sides.
 
 e.g.
 

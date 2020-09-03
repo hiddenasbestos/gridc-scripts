@@ -16,8 +16,7 @@ How to Install Script
 1. Load Grid Cartographer.
 2. Click the "G" tab at the top-left of the interface.
 3. Choose the "Scripts" page
-4. Click the "USER SCRIPTS FOLDER ..." button and a file explorer
-	or Finder window will appear.
+4. Click the "USER SCRIPTS FOLDER ..." button and a file explorer will open.
 5. Copy the folder "export_AppGameKit" into the user scripts folder that opened.
 6. Exit and restart Grid Cartographer.
 7. Verify the script is installed by clicking the "File" menu > "Export" sub-menu.
