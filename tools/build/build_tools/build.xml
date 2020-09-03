@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<script>
+
+	<hook>
+		<location id="command" />
+		<name id="COMP" />
+		<vm language="squirrel">
+			<load src="build_Compiler.nut" />
+			<call function="main">
+				<arg type="user" />
+			</call>
+		</vm>
+	</hook>
+
+	<hook>
+		<location id="command" />
+		<name id="LINK" />
+		<vm language="squirrel">
+			<load src="build_Linker.nut" />
+			<call function="main">
+				<arg type="user" />
+			</call>
+		</vm>
+	</hook>
+
+</script>
