@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<script>
+
+<!-- 
+
+Copyright 2018 David Walters
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software and associated documentation files (the "Software"), to deal in
+the Software without restriction, including without limitation the rights to
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+the Software, and to permit persons to whom the Software is furnished to do so,
+subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+-->
+
+	<hook>
+	
+		<location id="file_export_data" />
+		<location id="context_region_export" />
+		
+		<button>BTN_CAPTION</button>
+		<menu>MENU_CAPTION</menu>
+		
+		<vm language="squirrel">
+			<load src="export_AppGameKit.nut" />
+			<call function="main" />
+		</vm>
+	
+	</hook>
+
+	<locale id="en-us">
+		<string id="BTN_CAPTION"><![CDATA[APPGAMEKIT MAP EXPORT]]></string>
+		<string id="MENU_CAPTION"><![CDATA[AppGameKit Map]]></string>
+		<string id="FILE_SELECT_TITLE"><![CDATA[Export Map for AppGameKit...]]></string>
+		<string id="FILE_SELECT_DESC"><![CDATA[AppGameKit Binary Map]]></string>
+		<string id="STATUS_PROGRESS"><![CDATA[Exporting for AppGameKit]]></string>
+		<string id="ERROR_OK"><![CDATA[Export Complete.]]></string>
+		<string id="ERROR_NONE"><![CDATA[Nothing to Export.]]></string>
+		<string id="ERROR_CANCEL"><![CDATA[Export Cancelled.]]></string>
+		<string id="ERROR_FAIL"><![CDATA[Export Failed.]]></string>
+		<string id="ERROR_ACCESS"><![CDATA[Export Failed. Cannot write to the file.]]></string>
+		<string id="ERROR_INTERNAL"><![CDATA[Export Failed. Internal Error.]]></string>
+	</locale>
+
+</script>
