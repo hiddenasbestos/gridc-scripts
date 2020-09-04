@@ -21,3 +21,7 @@ GLMEMW [options] <file] [...]
    
    <file>     Binary file(s) to upload.
    
+
+The target address can be specified in decimal (default) or as hex 
+by using a '0x', '$' or '&' prefix.
+

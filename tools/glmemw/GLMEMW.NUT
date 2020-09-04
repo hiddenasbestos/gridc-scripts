@@ -60,7 +60,22 @@ function main( _args )
 
 		if ( addr_latch )
 		{
-			address = source_path.ToInt();
+			if ( ( source_path.Length() > 2 ) && ( source_path[0] == '0' ) &&
+				( ( source_path[1] == 'x' ) || ( source_path[1] == 'X' ) ) )
+			{
+				// C hex mode
+				address = source_path.Slice(2).ToInt( 16 );
+			}
+			else if ( ( source_path[0] == '$' ) || ( source_path[0] == '&' ) )
+			{
+				// asm hex mode
+				address = source_path.Slice(1).ToInt( 16 );
+			}
+			else
+			{
+				address = source_path.ToInt();
+			}
+
 			addr_latch = false;
 		}
 		else if ( source_path[ 0 ] == '-' )
