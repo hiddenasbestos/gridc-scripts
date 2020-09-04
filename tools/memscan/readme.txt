@@ -1,6 +1,11 @@
 
 This is an memory analyser tool for LibRetro and DOSBox Gridc.
 
+
+=====================
+Installation
+=====================
+
 Note: This tool requires the Pro or Steam editions of the software on
 Windows, at least version 4.4.0.3
 
@@ -15,3 +20,12 @@ displayed in real-time in a scrolling window. Use the HOME/END and PAGE
 UP/DOWN keys to navigate around the memory.
 
 
+=====================
+Changes
+=====================
+
+v2.1
+
+- Edit mode. Press F2 and type in new data bytes.
+- Use text mode mouse cursor.
+- Change Restart shortcut to F5

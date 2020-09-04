@@ -25,13 +25,15 @@ SOFTWARE.
 
 */
 
-app_version <- "2.01";
+app_version <- "2.1";
+
+STATUS_READY <- " Memory Analyser    Press ALT to activate menus";
 
 include( "uikit/textmenu.nut" );
 include( "uikit/displaybackup.nut" );
 include( "uikit/textdialog.nut" );
 include( "uikit/textform.nut" );
-
+include( "uikit/textcursor.nut" );
 
 function ParseHex( hex )
 {
@@ -75,6 +77,11 @@ editor <-
 	baseRow = 0,
 	memRows = 0,
 	scrollPip = -1,
+
+	edit_mode = false,
+	new_data = 0,
+	old_data = 0,
+	edit_cursor = 0,
 
 	show_all_bytes = true,
 	hide_rows = true,
@@ -265,20 +272,257 @@ function editor::onStateChange()
 		scrollPip = -1;
 	}
 
-	editor.status = " Memory Analyser    Press ALT to activate menus";
+	editor.status = STATUS_READY;
 	DrawStatus();
 }
 
+function editor::WriteData( data )
+{
+	switch ( byte_group )
+	{
+
+	case 1:
+		GCGameLink.Write8( editor.CursorAddr(), data );
+		break;
+
+	case 2:
+		if ( big_endian )
+		{
+			GCGameLink.Write8( editor.CursorAddr(), ( data >> 8 ) & 0xFF );
+			GCGameLink.Write8( editor.CursorAddr() + 1, ( data & 0xFF ) );
+		}
+		else
+		{
+			GCGameLink.Write8( editor.CursorAddr() + 1, ( data >> 8 ) & 0xFF );
+			GCGameLink.Write8( editor.CursorAddr(), ( data & 0xFF ) );
+		}
+		break;
+
+	case 4:
+		if ( big_endian )
+		{
+			GCGameLink.Write8( editor.CursorAddr(), ( data >> 24 ) & 0xFF );
+			GCGameLink.Write8( editor.CursorAddr() + 1, ( data >> 16 ) & 0xFF );
+			GCGameLink.Write8( editor.CursorAddr() + 2, ( data >> 8 ) & 0xFF );
+			GCGameLink.Write8( editor.CursorAddr() + 3, ( data ) & 0xFF );
+		}
+		else
+		{
+			GCGameLink.Write8( editor.CursorAddr() + 3, ( data >> 24 ) & 0xFF );
+			GCGameLink.Write8( editor.CursorAddr() + 2, ( data >> 16 ) & 0xFF );
+			GCGameLink.Write8( editor.CursorAddr() + 1, ( data >> 8 ) & 0xFF );
+			GCGameLink.Write8( editor.CursorAddr(), ( data ) & 0xFF );
+		}
+		break;
+
+	}
+}
+
+function editor::ReadData()
+{
+	var data;
+
+	switch ( byte_group )
+	{
+
+	case 1:
+		data = GCGameLink.Read8( editor.CursorAddr() );
+		break;
+
+	case 2:
+		if ( big_endian )
+		{
+			data = GCGameLink.Read16BE( editor.CursorAddr() );
+		}
+		else
+		{
+			data = GCGameLink.Read16LE( editor.CursorAddr() );
+		}
+		break;
+
+	case 4:
+		if ( big_endian )
+		{
+			data = GCGameLink.Read16BE( editor.CursorAddr() ) << 16;
+			data = data | GCGameLink.Read16BE( editor.CursorAddr() + 2 );
+		}
+		else
+		{
+			data = GCGameLink.Read16LE( editor.CursorAddr() + 2 ) << 16;
+			data = data | GCGameLink.Read16LE( editor.CursorAddr() );
+		}
+		break;
+
+	}
+
+	return data;
+}
+
+function editor::BeginEditMemory()
+{
+	GCConsole.CursorEnable( false );
+
+	DrawRAM();
+
+	UITextCursor.Hide();
+
+	// Move cursor to first character of current data byte
+	var cx = 12 + ( cursorCol * 3 );
+	GCConsole.Locate( cx, cursorRow - baseRow + 2 );
+
+	// capture the data at this address
+	old_data = ReadData();
+
+	GCConsole.Attrib( display.backAttr );
+	print( hexfmt( old_data, byte_group * 2 ) );
+	GCConsole.Locate( cx, cursorRow - baseRow + 2 );
+
+	edit_cursor = 0;
+	new_data = old_data;
+
+	GCConsole.CursorEnable( true );
+	UITextCursor.Show();
+}
+
+function editor::FlushEdit()
+{
+	if ( edit_mode )
+	{
+		// flush
+		if ( new_data != old_data )
+		{
+			WriteData( new_data );
+		}
+	}
+}
+
+function editor::DoEditMemory()
+{
+	if ( GCGameLink.IsActive() == false )
+	{
+		no_GCGameLink();
+		return;
+	}
+
+	// Supported?
+	if ( !( "Write8" in GCGameLink ) )
+	{
+		UITextDialog.MessageBox( "Edit mode is not supported by this\nversion of Grid Cartographer.\n\nPlease update to a more recent version." );
+		return;
+	}
+
+	edit_mode = true;
+
+	editor.status = " Edit Mode    Press ESC to cancel";
+	DrawStatus();
+
+	BeginEditMemory();
+
+	while ( edit_mode )
+	{
+		if ( GCGameLink.IsActive() == false )
+		{
+			edit_mode = false;
+			break;
+		}
+
+		var ch = GCConsole.PeekChar();
+		if ( ch == GCKey.Esc )
+		{
+			edit_mode = false;
+			break;
+		}
+		else if ( ch == GCKey.Enter || ch == GCKey.F2 )
+		{
+			FlushEdit();
+			edit_mode = false;
+			break;
+		}
+		else if ( ch == GCKey.Home ||
+				  ch == GCKey.End ||
+				  ch == GCKey.PageUp ||
+				  ch == GCKey.PageDown ||
+				  ch == GCKey.Left ||
+				  ch == GCKey.Right ||
+				  ch == GCKey.Up ||
+				  ch == GCKey.Down )
+		{
+			FlushEdit();
+			onKey( ch );
+			continue;
+		}
+
+		// valid digit?
+		var digit = null;
+		if ( ch >= '0' && ch <= '9' )
+			digit = ch - '0';
+		else if ( ch >= 'a' && ch <= 'f' )
+		{
+			ch = ch - 'a' + 'A';
+			digit = ch - 'A' + 10;
+		}
+		else if ( ch >= 'A' && ch <= 'F' )
+			digit = ch - 'A' + 10;
+
+		if ( digit != null )
+		{
+			putchar( ch );
+
+			var nibble = ( byte_group * 2 ) - ( edit_cursor + 1 );
+
+			new_data = new_data & ~( ( 0xF ) << ( nibble * 4 ) );
+			new_data = new_data | ( ( digit & 0xF ) << ( nibble * 4 ) );
+
+			++edit_cursor;
+
+			if ( edit_cursor >= byte_group * 2 )
+			{
+				FlushEdit();
+				onKey( GCKey.Right ); // next value
+				break;
+			}
+		}
+
+		var pointer = GCConsole.Pointer();
+		UpdateMouse( pointer );
+
+		if ( menu.Update() )
+		{
+			FlushEdit();
+			edit_mode = false;
+			break;
+		}
+		else
+		{
+			TickMouse( pointer );
+
+			UITextCursor.Update();
+		}
+	}
+
+	GCConsole.CursorEnable( false );
+
+	editor.status = STATUS_READY;
+	DrawStatus();
+
+	return edit_mode;
+}
+
+//------------------------------
+
+
 function updateDisplayMenu()
 {
-	var opts = menu.Menus[ g_display_menu ].options;
+	{
+		var opts = menu.Menus[ g_display_menu ].options;
 
-	opts[ 0 ].checked <- ( editor.show_all_bytes == false );
-	opts[ 2 ].checked <- ( editor.hide_rows == true );
-	opts[ 4 ].checked <- ( editor.byte_group == 1 );
-	opts[ 5 ].checked <- ( editor.byte_group == 2 );
-	opts[ 6 ].checked <- ( editor.byte_group == 4 );
-	opts[ 8 ].checked <- ( editor.big_endian );
+		opts[ 0 ].checked <- ( editor.show_all_bytes == false );
+		opts[ 2 ].checked <- ( editor.hide_rows == true );
+		opts[ 4 ].checked <- ( editor.byte_group == 1 );
+		opts[ 5 ].checked <- ( editor.byte_group == 2 );
+		opts[ 6 ].checked <- ( editor.byte_group == 4 );
+		opts[ 8 ].checked <- ( editor.big_endian );
+	}
 
 	onAddrChange();
 }
@@ -447,6 +691,16 @@ function initMenu()
 		]
 	});
 
+	g_edit_menu <- menu.Menus.Length();
+
+	menu.Menus.Add({
+		name = "&Edit",
+		options =
+		[
+			{ name = "&Edit Mode...", id = "edit_edit", shortcut="F2" },
+		]
+	});
+
 	menu.Menus.Add({
 		name = "&Search",
 		options =
@@ -459,7 +713,7 @@ function initMenu()
 		name = "Fi&lter",
 		options =
 		[
-			{ name = "&Restart", id = "tag_reset", shortcut="F2" },
+			{ name = "&Restart", id = "tag_reset", shortcut="F5" },
 			{ div=1 },
 			{ name = "now == old", id = "tag_EQ", shortcut="1" },
 			{ name = "now != old", id = "tag_NEQ", shortcut="2" },
@@ -662,7 +916,7 @@ function DrawData_4( addr, a, tags, cursorAddr )
 
 function DrawRAM()
 {
-//	UITextCursor.Hide();
+	UITextCursor.Hide();
 
 	var row;
 	var rowMax = editor.Rows();
@@ -757,7 +1011,7 @@ function DrawRAM()
 			putchar(' ');
 	}
 
-//	UITextCursor.Show();
+	UITextCursor.Show();
 }
 
 function DrawStatus()
@@ -1050,6 +1304,14 @@ function onMenuSelect( id )
 			no_GCGameLink();
 		}
 
+		break;
+
+	case "edit_edit":
+		while (	editor.DoEditMemory() )
+		{
+			continue;
+		}
+		editor.edit_mode = false;
 		break;
 
 	case "debug_pause":
@@ -1347,6 +1609,7 @@ function onMenuSelect( id )
 
 	case "tag_reset":
 
+		if ( GCGameLink.IsActive() )
 		{
 			var reset = false;
 
@@ -1373,6 +1636,10 @@ function onMenuSelect( id )
 				DrawStatus();
 				updateDisplayMenu();
 			}
+		}
+		else
+		{
+			no_GCGameLink();
 		}
 
 		break;
@@ -1439,7 +1706,7 @@ function onMenuSelect( id )
 
 		UITextDialog.MessageBox( "     Memory Analyser" + "\n" +
 								 "    by David Walters!   " + "\n\n" +
-								 "      Version " + app_version + "      "
+								 "       Version " + app_version + "      "
 		);
 
 		break;
@@ -1515,6 +1782,11 @@ function onAddrChange()
 	}
 
 	DrawStatus();
+
+	if ( editor.edit_mode )
+	{
+		editor.BeginEditMemory();
+	}
 }
 
 function TickKey()
@@ -1583,6 +1855,10 @@ function onKey( ch )
 		break;
 
 	case GCKey.F2:
+		onMenuSelect( "edit_edit" );
+		break;
+
+	case GCKey.F5:
 		onMenuSelect( "tag_reset" );
 		break;
 
@@ -1710,6 +1986,8 @@ function TickMouse( pointer )
 	{
 		if ( pointer.x == adapter.columns - 1 )
 		{
+			editor.FlushEdit();
+
 			onClickScroll( pointer );
 		}
 
@@ -1717,6 +1995,8 @@ function TickMouse( pointer )
 		{
 			if ( pointer.x >= 61 && pointer.x <= 76 )
 			{
+				editor.FlushEdit();
+
 				// text area
 				editor.cursorRow = editor.baseRow + ( pointer.y - 2 );
 				editor.cursorCol = pointer.x - 61;
@@ -1725,7 +2005,7 @@ function TickMouse( pointer )
 				editor.cursorCol = editor.cursorCol & cursorMask;
 
 				onAddrChange();
-				return
+				return;
 			}
 
 			switch ( editor.byte_group )
@@ -1735,6 +2015,8 @@ function TickMouse( pointer )
 
 				if ( pointer.x >= 12 && pointer.x <= 58 )
 				{
+					editor.FlushEdit();
+
 					// value area
 					editor.cursorRow = editor.baseRow + ( pointer.y - 2 );
 					editor.cursorCol = ( pointer.x - 12 ) / 3;
@@ -1753,6 +2035,8 @@ function TickMouse( pointer )
 
 					if ( o < 4 )
 					{
+						editor.FlushEdit();
+
 						// value area
 						editor.cursorRow = editor.baseRow + ( pointer.y - 2 );
 						editor.cursorCol = 2 * d;
@@ -1772,6 +2056,8 @@ function TickMouse( pointer )
 
 					if ( o < 8 )
 					{
+						editor.FlushEdit();
+
 						// value area
 						editor.cursorRow = editor.baseRow + ( pointer.y - 2 );
 						editor.cursorCol = 4 * d;
@@ -1828,13 +2114,11 @@ function main( args )
 	var memorySize = 0;
 	var retroActive = null;
 
-//	UITextCursor.Create();
+	UITextCursor.Create();
 
 	for ( ; ; )
 	{
 		var pointer = GCConsole.Pointer();
-
-//		UITextCursor.Update();
 
 		GCKernel.Wait(0);
 
@@ -1899,11 +2183,13 @@ function main( args )
 
 				DrawRAM();
 			}
+
+			UITextCursor.Update();
 		}
 	}
 
 
-//	UITextCursor.Destroy();
+	UITextCursor.Destroy();
 
 	GCBuffer.Destroy( editor.snapBuffer );
 	GCBuffer.Destroy( editor.tagBuffer );
