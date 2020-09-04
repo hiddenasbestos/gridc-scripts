@@ -1,5 +1,5 @@
 
-This is an memory analyser tool for LibRetro and DOSBox Gridc.
+This is a memory analyser tool for LibRetro and DOSBox Gridc.
 
 
 =====================
