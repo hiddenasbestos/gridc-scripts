@@ -89,6 +89,7 @@ editor <-
 	display_hex = true,
 	display_signed = true,
 	big_endian = true,
+	high_ascii = false,
 
 	status = "",
 };
@@ -522,6 +523,7 @@ function updateDisplayMenu()
 		opts[ 5 ].checked <- ( editor.byte_group == 2 );
 		opts[ 6 ].checked <- ( editor.byte_group == 4 );
 		opts[ 8 ].checked <- ( editor.big_endian );
+		opts[ 10 ].checked <- ( editor.high_ascii );
 	}
 
 	onAddrChange();
@@ -745,6 +747,8 @@ function initMenu()
 			{ name = "&4-Byte", id = "display_4byte" },
 			{ div=1 },
 			{ name = "Big &Endian", id = "display_endian" },
+			{ div=1 },
+			{ name = "High &ASCII", id = "display_highascii" },
 		]
 	});
 
@@ -985,13 +989,26 @@ function DrawRAM()
 				{
 					putchar( '?' );
 				}
-				else if ( el < 32 || el > 127 )
+				else if ( !editor.high_ascii && ( el < 32 ||  el > 127 ) )
+				{
+					putchar( '.' );
+				}
+				else if ( editor.high_ascii && el < ( 127 + 32 ) )
 				{
 					putchar( '.' );
 				}
 				else
 				{
-					var s = el.ToChar();
+					var s;
+					if ( ( el > ( 127 + 32 ) ) && editor.high_ascii )
+					{
+						var el2 = el - 128;
+						s = el2.ToChar();
+					}
+					else
+					{
+					 s = el.ToChar()
+					}
 					print( s );
 				}
 			}
@@ -1699,6 +1716,11 @@ function onMenuSelect( id )
 
 	case "display_endian":
 		editor.big_endian = !editor.big_endian;
+		updateDisplayMenu();
+		break;
+
+	case "display_highascii":
+		editor.high_ascii = !editor.high_ascii;
 		updateDisplayMenu();
 		break;
 
